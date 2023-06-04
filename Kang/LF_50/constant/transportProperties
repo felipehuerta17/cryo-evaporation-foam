@@ -1,0 +1,126 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1806                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      transportProperties;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+transportModel Newtonian;
+
+// Laminar viscosity
+nu             1.87e-7;
+
+// Thermal expansion coefficient
+beta            5.6e-03;
+
+// Reference temperature
+// Must be consistent with Antoine's equation
+TRef            77.7316;
+
+// Laminar Prandtl number
+Pr              2.4;
+
+// Turbulent Prandtl number
+Prt             0.85;
+
+// Specific heat
+cp              64.614; // J mol ^-1 K ^ -1 , Liquid
+Cv              20.813; // J mol ^-1 K ^ -1, vapour
+Cp_V		    31.4624; // J mol^-1 K ^ -1, vapour
+
+// Latent heat of vaporization
+deltaH          5517.7; //J/mol
+
+// Molar weight
+MW              28.014;
+
+// rho_L # Liquid nitrogen density
+rho_L 		804.906;
+
+// Liquid thermal conductivity;
+k_L		    0.145; 
+
+// Overall heat transfer coefficient for the vapour phase
+U_dry 		0.185;
+
+// Overall heat transfer coefficient for the liquid phase
+U_L         0.295;
+U_bot	    2.73;
+
+// Storage tank properties
+d_i		    0.1296;
+d_o 		0.13;
+tank_height	0.75805;
+
+// Initial liquid filling
+LF		    0.5; 
+T_air       298.15; // K
+
+// Vapour to liquid to total vapour heat ingress ratio
+
+// 1: equilibrium, 2: fixed r_q, 3: convection coefficient, 4: analytical solutions
+vapourHeatTransferModel		5;
+h_VL		0.1;
+r_q		    0.99; 
+
+// Conjugate heat transfer
+eta_evap	0.9772; // Side wall heat flux partitioning 	
+
+// Analytical solutions parameters
+k_V 	    0.00717; // Wm^-2 K^-1
+k_V_roof 	0.00717;
+U_roof 	    0.185;
+gradT_roof 	0;
+q_roof      0;
+roof_BC         Neumann;
+
+// Number of nodes in the vapour vertical direction
+nz_V        100;
+
+// 1-D model
+// Evaporation coefficient
+f_e	0.01; // 17;
+// Condensation coefficient
+f_c	0.01; // 17;
+
+// Liquid density coefficients
+// Linear liquid thermal expansion
+rhoL_a0 1161.58;
+rhoL_a1 -4.595;
+rhoL_a2 0;
+rhoL_a3 0;
+
+// Vapour thermal conductivity coefficients
+// for liquid nitrogen
+kV_a0   -1.02395e-3;
+kV_a1   1.12716e-4;
+kV_a2   -9.13665e-8;
+kV_a3   5.17227e-11;
+
+
+// Antoine coefficients
+// Based on  log10(P|bar)
+A       3.7362;
+B       264.651;
+C       -6.788;
+
+// Initial vapour temperature coefficients
+// Calcuates the initial vapour temperature profiles
+// from experimental data
+
+temp_v_a0   78.558;
+temp_v_a1   95.327;
+temp_v_a2   -63.659;
+temp_v_a3   71.724;
+
+// ************************************************************************* //

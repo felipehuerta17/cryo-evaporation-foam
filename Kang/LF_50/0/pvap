@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1806                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      pvap;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -2 0 0 0 0];
+
+// The initial condition of the vapour pressure is the atmospheric pressure
+internalField   uniform 100000;
+
+boundaryField
+{
+    bottom
+    {
+        type            calculated;
+        value           $internalField;
+    }
+
+    interphase
+    {
+        type            calculated;
+        value           $internalField;
+    }
+
+    tank_wall
+    {
+        type            calculated;
+        value           $internalField;
+    }
+
+    wedge0
+    {
+        type            wedge;
+    }
+
+    wedge1
+    {
+        type            wedge;
+    }
+
+}
+
+// ************************************************************************* //

@@ -1,0 +1,35 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+// Template for automatic generation of temperature profiles. Copy this file
+// to the system directory, change the start/end points and execute 
+// postProcess -func singleGraph
+
+// singleGraph creates a vertical line in the tank axis r=0. For plotting
+// a more representative temperature profile, singleGraph_half_radius is
+// recommended.
+
+singleGraph
+{
+    start   (0.0324 0 0);
+    end     (0.0324 0.0 0.606);
+    fields  (T);
+
+    #includeEtc "caseDicts/postProcessing/graphs/sampleDict.cfg"
+
+    interpolationScheme cell;
+    setConfig
+    {
+        axis    z;
+        setFormat       csv;
+        type uniform;
+    }
+
+    // Must be last entry
+    #includeEtc "caseDicts/postProcessing/graphs/graph.cfg"
+}

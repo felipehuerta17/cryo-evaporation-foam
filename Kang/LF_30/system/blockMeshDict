@@ -1,0 +1,113 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1806                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// This blockMeshDict generates a wedge
+// Sourced from https://openfoamwiki.net/index.php/Main_ContribExamples/AxiSymmetric
+scale   1;
+vertices
+(
+    (0 0 0)
+    (0.0648 0.00438 0)
+    (0.0648 0.00438 0.22742)
+    (0 0 0.22742)
+    (0.0648 -0.00438 0)
+    (0.0648 -0.00438 0.22742)
+);
+
+edges
+(
+);
+
+blocks
+(
+     hex (0 4 1 0 3 5 2 3) (27 1 85) simpleGrading
+    (
+	// x-direction, local refinement close to the walls 
+    (
+	    (0.9 0.833 1)
+	    (0.1 0.167 0.26783)
+	)
+
+	1 // This is the angular direction
+	
+	// z: vertical direction
+    (
+	    (0.5 0.5 4)
+	    (0.5 0.5 0.25)
+	)
+    )
+);
+
+boundary               // keyword
+    (
+    wedge0
+     { 
+           type wedge;
+           faces  
+           (
+               (0 1 2 3)
+           );
+      }
+    wedge1
+     { 
+           type wedge;
+           faces  
+           (
+               (0 3 5 4)
+           );
+      }
+     tank_wall
+     { 
+           type wall;
+           faces  
+           (
+               (1 4 5 2)
+           );
+      }
+     bottom
+     { 
+           type wall;
+           faces  
+           (
+               (0 4 1 0)
+           );
+      }
+     
+     interphase
+     { 
+           type wall;
+           faces  
+           (
+               (3 5 2 3)
+           );
+      }
+     axis
+     { 
+           type empty;
+           faces  
+           (
+               (0 3 3 0)
+           );
+      }
+    );
+    
+
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

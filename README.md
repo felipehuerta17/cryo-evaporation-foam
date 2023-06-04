@@ -1,5 +1,7 @@
 # cryo-evaporation-foam
 OpenFOAM and Python code to simulate the non-isobaric evaporation of cryogenic liquids in storage tanks. This code is part of the supplementary material for the research article "CFD modelling of the non-isobaric evaporation of cryogenic liquids in storage tanks" written by Felipe Huerta and Velisa Vesovic.
+   
+Cite the code:  [![DOI](https://zenodo.org/badge/649334155.svg)](https://zenodo.org/badge/latestdoi/649334155)
 
 ## Features
 * Simulates the non-isobaric evaporation of pure cryogenic liquids in storage tanks.
@@ -70,9 +72,9 @@ To illustrate the use of the solver an example to run the case with the shortest
    `vim 120/vap_mesh.csv`
    
    `vim 120/vap_temp.csv`
-   
 
-References for the experimental scenarios:
+
+## References for the experimental scenarios:
 
 1. M. Seo and S. Jeong, "Analysis of self-pressurization phenomenon of cryogenic fluid storage tank with thermal diffusion model," Cryogenics, vol. 50, no. 9, pp. 549-555, Sep 2010, doi: https://doi.org/10.1016/j.cryogenics.2010.02.021. 
 

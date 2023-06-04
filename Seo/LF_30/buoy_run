@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run simulation and save the log in buoy.log file
+buoyantBoussinesqPvapFoam > buoy.log
+# Create liquid temperature profiles
+postProcess -func singleGraph
+
+#------------------------------------------------------------------------------

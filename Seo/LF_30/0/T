@@ -1,0 +1,234 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1806                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      T;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 0 1 0 0 0];
+
+internalField   uniform 77.622;
+
+boundaryField
+{
+    // Insulated bottom
+   bottom
+    {
+        type            codedMixed;
+        refValue        uniform 288.15;
+        refGradient     uniform 0;
+        valueFraction   uniform 0;
+        value           uniform 77.7316;
+        name            bottomConvectionConduction;
+
+        // Include headers for turbulent transport
+        codeInclude     #{
+            #include "rhoThermo.H"
+            #include "turbulentFluidThermoModel.H"
+        #};
+    
+        codeOptions     #{
+        -I$(LIB_SRC)/meshTools/lnInclude \
+        -I$(LIB_SRC)/transportModels/compressible/lnInclude \
+        -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
+        -I$(LIB_SRC)/TurbulenceModels/turbulenceModels/lnInclude \
+        -I$(LIB_SRC)/TurbulenceModels/compressible/lnInclude
+               #};
+
+        code            #{
+            const fvPatch& boundaryPatch = patch();     // Access to the patch
+            const fvMesh& mesh = patch().boundaryMesh().mesh(); // Access to the mesh
+            const scalarField& deltaCoeffs = boundaryPatch.deltaCoeffs();
+
+            const turbulenceModel& tur = this->db().objectRegistry::lookupObject<turbulenceModel>("turbulenceProperties");
+            // Read turbulent thermal difussivity
+            const volScalarField& alphat = this->db().objectRegistry::lookupObject<volScalarField>("alphat");
+            // Read rhok = 1 - beta * delta T
+            const volScalarField& rhok = this->db().objectRegistry::lookupObject<volScalarField>("rhok");
+            // const auto thermoPhys = this->db().objectRegistry::lookupObject<IOdictionary>("thermophysicalProperties");
+            const auto transport = this->db().objectRegistry::lookupObject<IOdictionary>("transportProperties");
+            // Read laminar Prandtl number from thermophysicalProperties dictionary
+            // const scalar Pr = readScalar(thermoPhys.subDict("mixture").subDict("transport").lookup("Pr"));
+            // const scalar Cp = readScalar(thermoPhys.subDict("mixture").subDict("thermodynamics").lookup("Cp"));
+            const scalar rho_0 = readScalar(transport.lookup("rho_L"));
+            const volScalarField rho = rho_0 * rhok;
+            const scalar Pr = readScalar(transport.lookup("Pr"));
+            // Convert cp to  J/kgK
+            scalar Cp = readScalar(transport.lookup("cp"));
+            const scalar MW = readScalar(transport.lookup("MW"));
+            Cp = Cp * 1000 / MW;
+            // Get laminar viscosity
+            const volScalarField nu  = tur.nu();///rho; // This is the dynamic viscosity
+            const volScalarField alphaEff = alphat/rho + nu/Pr; // Alphat is in kg/(m*s) where it should be m^2/s.
+
+            label patch_ID = mesh.boundaryMesh().findPatchID("bottom");
+            // Wall thermal diffusivity
+            const fvPatchField<double>& alphaEffWall = alphaEff.boundaryField()[patch_ID];
+            const fvPatchField<double>& rhoWall = rho.boundaryField()[patch_ID];
+            const scalar U_L = readScalar(transport.lookup("U_bot"));
+            const scalar T_air = readScalar(transport.lookup("T_air"));
+
+            const scalarField k_eff = alphaEffWall*rhoWall*Cp;
+
+    		bool debug = false;
+
+            if(debug)
+            {
+            Info << "alpha =" << nu[0]/Pr << endl;
+            Info << "alphaEff =" << alphaEffWall[0] << endl;
+            Info << "rhoWall =" << rhoWall << endl;
+            Info << "alphat =" << alphat.boundaryField()[patch_ID] << endl;
+            //Info << "alphat 2 =" << tur.nut().boundaryField()[tankWall]/Prt << endl;
+            Info << "kEff = " << k_eff << endl;
+            Info << "k_lam =" << nu[0]/Pr*rho[0]*Cp << endl;
+            Info << Pr << endl;
+            Info << "U_L = " << U_L << endl;
+            Info << "T_air = " << T_air << endl;
+            }
+
+            // Update boundary conditions
+            this->refValue() = T_air;
+            this->refGrad() = 0;       // 0 for convection-conduction bc
+            this->valueFraction() = 1.0/(1.0 + k_eff/(U_L*(1/deltaCoeffs)) ); // Robin BC
+        #};
+    }
+
+    // T(int) = T_sat(P_vap)
+    interphase
+    {
+        type            codedFixedValue;
+        value           uniform 77.622;
+        redirectType    satTatPvap;
+
+        code
+        #{
+            // Access to the vapour pressure calculated by buoyantBoussinesqPvapFoam
+            const fvPatch& boundaryPatch = patch();    
+            const vectorField& Cf = boundaryPatch.Cf(); 
+            scalarField& field = *this; //
+            const volScalarField& psat = db().lookupObject <volScalarField>("pvap");
+            // Set boundary temperature as the saturation temperature evaluated
+            // at the vapour pressure using the Antoine's law.
+            scalar Tsat = 264.651/(3.7362-log(psat[1]/100000)/log(10.)) + 6.7888;
+            forAll(Cf, i)
+            {
+                field[i] = Tsat;
+            }
+        #};
+    }
+    
+    // Convection conduction boundary condition at the wall
+    // WIP
+    tank_wall
+    {
+        type            codedMixed;
+        refValue        uniform 288.15;
+        refGradient     uniform 0;
+        valueFraction   uniform 0;
+        value           uniform 77.7316;
+        name            convection_conduction;
+
+        // Include headers for turbulent transport
+        codeInclude     #{
+            #include "rhoThermo.H"
+            #include "turbulentFluidThermoModel.H"
+        #};
+    
+        codeOptions     #{
+        -I$(LIB_SRC)/meshTools/lnInclude \
+        -I$(LIB_SRC)/transportModels/compressible/lnInclude \
+        -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
+        -I$(LIB_SRC)/TurbulenceModels/turbulenceModels/lnInclude \
+        -I$(LIB_SRC)/TurbulenceModels/compressible/lnInclude
+               #};
+
+        code            #{
+            const fvPatch& boundaryPatch = patch();     // Access to the patch
+            const fvMesh& mesh = patch().boundaryMesh().mesh(); // Access to the mesh
+            const scalarField& deltaCoeffs = boundaryPatch.deltaCoeffs();
+
+            const turbulenceModel& tur = this->db().objectRegistry::lookupObject<turbulenceModel>("turbulenceProperties");
+            // Read turbulent thermal difussivity
+            const volScalarField& alphat = this->db().objectRegistry::lookupObject<volScalarField>("alphat");
+            // Read rhok = 1 - beta * delta T
+            const volScalarField& rhok = this->db().objectRegistry::lookupObject<volScalarField>("rhok");
+            // const auto thermoPhys = this->db().objectRegistry::lookupObject<IOdictionary>("thermophysicalProperties");
+            const auto transport = this->db().objectRegistry::lookupObject<IOdictionary>("transportProperties");
+            // Read laminar Prandtl number from thermophysicalProperties dictionary
+            // const scalar Pr = readScalar(thermoPhys.subDict("mixture").subDict("transport").lookup("Pr"));
+            // const scalar Cp = readScalar(thermoPhys.subDict("mixture").subDict("thermodynamics").lookup("Cp"));
+            const scalar rho_0 = readScalar(transport.lookup("rho_L"));
+            const volScalarField rho = rho_0 * rhok;
+            const scalar Pr = readScalar(transport.lookup("Pr"));
+            // Convert cp to  J/kgK
+            scalar Cp = readScalar(transport.lookup("cp"));
+            const scalar MW = readScalar(transport.lookup("MW"));
+            Cp = Cp * 1000 / MW;
+            // Get laminar viscosity
+            const volScalarField nu  = tur.nu();///rho; // This is the dynamic viscosity
+            const volScalarField alphaEff = alphat/rho + nu/Pr; // Alphat is in kg/(m*s) where it should be m^2/s.
+
+            // Find Patch ID of the tank wall
+            label tankWall = mesh.boundaryMesh().findPatchID("tank_wall");
+            // Wall thermal diffusivity
+            const fvPatchField<double>& alphaEffWall = alphaEff.boundaryField()[tankWall];
+            const fvPatchField<double>& rhoWall = rho.boundaryField()[tankWall];
+            scalar U_L = readScalar(transport.lookup("U_L"));
+            // Adjust liquid heat transfer coefficient based on liquid volume
+            const volScalarField& V_vap = this->db().objectRegistry::lookupObject<volScalarField>("V_vap");
+            // Retrieve V_tankfield
+            const volScalarField& V_tank = this->db().objectRegistry::lookupObject<volScalarField>("V_tank");
+            // Read initial liquid filling LF
+            const scalar LF = readScalar(transport.lookup("LF"));
+            // Adjust U_L to reflect the varying liquid area as the evpaoration progresses
+            U_L *= (V_tank[1] - V_vap[1])/(V_tank[1]*(LF));
+
+
+            const scalar T_air = readScalar(transport.lookup("T_air"));  
+            const scalarField k_eff = alphaEffWall*rhoWall*Cp;
+
+    		bool debug = false;
+
+            if(debug)
+            {
+            Info << "alpha =" << nu[0]/Pr << endl;
+            Info << "alphaEff =" << alphaEffWall[0] << endl;
+            Info << "rhoWall =" << rhoWall << endl;
+            Info << "alphat =" << alphat.boundaryField()[tankWall] << endl;
+            //Info << "alphat 2 =" << tur.nut().boundaryField()[tankWall]/Prt << endl;
+            Info << "kEff = " << k_eff << endl;
+            Info << "k_lam =" << nu[0]/Pr*rho[0]*Cp << endl;
+            Info << Pr << endl;
+            Info << "U_L = " << U_L << endl;
+            Info << "T_air = " << T_air << endl;
+            Info << " U_L_corrected = " << U_L << " W m^-2 K^-1 " << endl;
+            }
+
+            // Update boundary conditions
+            this->refValue() = T_air;
+            this->refGrad() = 0;       // 0 for convection-conduction bc
+            this->valueFraction() = 1.0/(1.0 + k_eff/(U_L*(1/deltaCoeffs)) ); // Robin BC
+        #};
+    }
+
+    wedge0
+    {
+        type            wedge;
+    }
+
+    wedge1
+    {
+        type            wedge;
+    }
+}
+
+// ************************************************************************* //
